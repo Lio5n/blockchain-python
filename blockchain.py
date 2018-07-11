@@ -14,6 +14,7 @@
 import hashlib
 import json
 from time import time
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from flask import Flask, request
@@ -26,6 +27,11 @@ class Blockchain:
         self.chain = []
         self.current_transactions = []
         self.new_block(proof=100, previous_hash=1)
+        self.nodes = set()
+
+    def register_node(self, address: str):
+        parsed_url = urlparse(address)
+        self.nodes.add(parsed_url.netloc)
 
     def new_block(self, proof, previous_hash=None):
         block = {
@@ -119,6 +125,22 @@ def mine():
         "previous_hash": block['previous_hash']
     }
     return jsonify(response), 200
+
+
+@app.route('/nodes/register', methods=['POST'])
+def register_nodes():
+    values = request.get_json()
+    print(values)
+    nodes = values.get("nodes")
+    if nodes is None:
+        return "Error: please supply a valid list of nodes", 400
+    for node in nodes:
+        blockchain.register_node(node)
+    response = {
+        "message": "New nodes have been added",
+        "total_nodes": list(blockchain.nodes)
+    }
+    return jsonify(response), 201
 
 
 if __name__ == '__main__':
